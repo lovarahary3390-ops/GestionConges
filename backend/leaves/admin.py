@@ -1,12 +1,11 @@
-
 from django.contrib import admin
 from .models import TypeConge, SoldeConge, DemandeConge
 
 
 @admin.register(TypeConge)
 class TypeCongeAdmin(admin.ModelAdmin):
-    list_display = ('__str__',)
-    search_fields = ('__str__',)
+    list_display = ('libelle', 'nombre_jours_max')
+    search_fields = ('libelle',)
 
 
 @admin.register(SoldeConge)

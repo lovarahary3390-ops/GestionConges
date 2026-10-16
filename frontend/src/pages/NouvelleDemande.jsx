@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Send, ArrowLeft } from 'lucide-react';
 import api from '../services/api';
+import { messageApi } from '../utils/messageApi';
 
 // Retrouve l'identifiant d'un objet, quel que soit son nom exact
 function idDe(obj) {
@@ -19,6 +20,13 @@ function calculerJours(debut, fin) {
     if (!debut || !fin) return 0;
     const diff = (new Date(fin) - new Date(debut)) / (1000 * 60 * 60 * 24);
     return diff >= 0 ? Math.round(diff) + 1 : 0;
+}
+
+// Date du jour (heure locale) au format AAAA-MM-JJ
+function dateDuJour() {
+    const d = new Date();
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+    return d.toISOString().slice(0, 10);
 }
 
 export default function NouvelleDemande() {
@@ -39,21 +47,15 @@ export default function NouvelleDemande() {
                 const liste = res.data.results || res.data;
                 setTypes(liste);
                 if (liste.length > 0) {
-                    const premier = liste[0];
-                    const id = idDe(premier);
-                    setForm((f) => ({ ...f, type_conge: id }));
+                    const id = idDe(liste[0]);
                     if (id === undefined) {
-                        setErreur(
-                            `Impossible de trouver l'identifiant du type de congé. Champs reçus : ${Object.keys(premier).join(', ')}`
-                        );
+                        setErreur('Les types de congé sont indisponibles pour le moment.');
+                    } else {
+                        setForm((f) => ({ ...f, type_conge: id }));
                     }
                 }
             })
-            .catch((err) =>
-                setErreur(
-                    `Impossible de charger les types de congé (${err.response?.status || err.message}) - ${err.config?.url}`
-                )
-            );
+            .catch((err) => setErreur(messageApi(err, 'Impossible de charger les types de congé.')));
     }, []);
 
     const changer = (e) => setForm({ ...form, [e.target.name]: e.target.value });
@@ -70,6 +72,10 @@ export default function NouvelleDemande() {
             setErreur('Le type de congé est obligatoire.');
             return;
         }
+        if (form.date_debut.slice(0, 4) !== form.date_fin.slice(0, 4)) {
+            setErreur('Une demande ne peut pas couvrir deux années. Faites deux demandes séparées.');
+            return;
+        }
         setEnvoi(true);
         try {
             await api.post('/leaves/', {
@@ -78,12 +84,7 @@ export default function NouvelleDemande() {
             });
             navigate('/demandes');
         } catch (err) {
-            const detail = err.response?.data;
-            setErreur(
-                detail
-                    ? `Erreur ${err.response.status} : ${JSON.stringify(detail)} (envoyé type_conge=${JSON.stringify(form.type_conge)})`
-                    : "Erreur lors de l'envoi de la demande."
-            );
+            setErreur(messageApi(err, "Erreur lors de l'envoi de la demande."));
         } finally {
             setEnvoi(false);
         }
@@ -112,12 +113,12 @@ export default function NouvelleDemande() {
                     <div style={styles.champ}>
                         <label style={styles.label}>Date de début</label>
                         <input style={styles.input} type="date" name="date_debut"
-                            value={form.date_debut} onChange={changer} required />
+                            value={form.date_debut} min={dateDuJour()} onChange={changer} required />
                     </div>
                     <div style={styles.champ}>
                         <label style={styles.label}>Date de fin</label>
                         <input style={styles.input} type="date" name="date_fin"
-                            value={form.date_fin} min={form.date_debut} onChange={changer} required />
+                            value={form.date_fin} min={form.date_debut || dateDuJour()} onChange={changer} required />
                     </div>
                 </div>
 

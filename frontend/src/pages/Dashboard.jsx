@@ -41,10 +41,15 @@ export default function Dashboard() {
                 const r = await api.get('/leave-types/');
                 setTypes(r.data.results || r.data);
             } catch { /* facultatif */ }
-            try {
-                const r = await api.get('/employees/');
-                setEmployes(r.data.results || r.data);
-            } catch { setEmployes(null); }
+
+            // Seul l'ADMIN a le droit de lister les employés (sinon erreur 403)
+            if (user?.role === 'ADMIN') {
+                try {
+                    const r = await api.get('/employees/');
+                    setEmployes(r.data.results || r.data);
+                } catch { setEmployes(null); }
+            }
+
             try {
                 const r = await api.get('/leave-balances/');
                 setSoldes(r.data.results || r.data);
@@ -52,9 +57,11 @@ export default function Dashboard() {
             setChargement(false);
         };
         charger();
-    }, []);
+    }, [user?.role]);
 
     const annee = new Date().getFullYear();
+    const estAdmin = user?.role === 'ADMIN';
+    const monId = user?.id_employe ?? user?.id;
 
     const donnees = useMemo(() => {
         const delAnnee = demandes.filter(
@@ -80,7 +87,14 @@ export default function Dashboard() {
             pourcentage: total ? Math.round((valeur / total) * 100) : 0,
         }));
 
-        const valeursSoldes = soldes.map(restant).filter((v) => Number.isFinite(v));
+        // Mon solde de l'année en cours (et non celui de tous les employés)
+        const mesSoldes = soldes.filter((s) => {
+            const idEmp = s.employe && typeof s.employe === 'object' ? idDe(s.employe) : s.employe;
+            const memeEmploye = monId === undefined || idEmp === undefined || String(idEmp) === String(monId);
+            const memeAnnee = s.annee === undefined || Number(s.annee) === annee;
+            return memeEmploye && memeAnnee;
+        });
+        const valeursSoldes = mesSoldes.map(restant).filter((v) => Number.isFinite(v));
         const joursRestants = valeursSoldes.length ? valeursSoldes.reduce((a, b) => a + b, 0) : null;
 
         const recentes = [...demandes]
@@ -95,13 +109,16 @@ export default function Dashboard() {
             joursRestants,
             recentes,
         };
-    }, [demandes, types, soldes, annee]);
+    }, [demandes, types, soldes, annee, monId]);
 
     const cartes = [
-        { titre: 'Employés', valeur: employes ? employes.length : '-', icone: Users, couleur: '#2563eb', fond: '#e8f0fe' },
+        // La carte "Employés" n'est visible que pour l'ADMIN
+        ...(estAdmin
+            ? [{ titre: 'Employés', valeur: employes ? employes.length : '-', icone: Users, couleur: '#2563eb', fond: '#e8f0fe' }]
+            : []),
         { titre: 'Demandes en attente', valeur: donnees.enAttente, icone: Clock, couleur: '#f59e0b', fond: '#fef3c7' },
         { titre: `Congés approuvés ${annee}`, valeur: donnees.approuvees, icone: CheckCircle, couleur: '#16a34a', fond: '#dcfce7' },
-        { titre: 'Jours restants', valeur: donnees.joursRestants ?? '-', icone: CalendarDays, couleur: '#8b5cf6', fond: '#ede9fe' },
+        { titre: 'Mes jours restants', valeur: donnees.joursRestants ?? '-', icone: CalendarDays, couleur: '#8b5cf6', fond: '#ede9fe' },
     ];
 
     return (
