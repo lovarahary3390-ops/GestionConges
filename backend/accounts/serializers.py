@@ -1,7 +1,9 @@
+
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
 from .models import Employe, valider_nom
 from employees.serializers import ServiceSerializer
 
@@ -37,8 +39,14 @@ class EmployeSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(e.messages[0])
 
     def validate(self, data):
-        first_name = data.get('first_name', getattr(self.instance, 'first_name', None))
-        last_name = data.get('last_name', getattr(self.instance, 'last_name', None))
+        first_name = data.get(
+            'first_name',
+            getattr(self.instance, 'first_name', None)
+        )
+        last_name = data.get(
+            'last_name',
+            getattr(self.instance, 'last_name', None)
+        )
 
         if first_name and last_name:
             doublon = Employe.objects.filter(
@@ -47,15 +55,20 @@ class EmployeSerializer(serializers.ModelSerializer):
             )
             if self.instance is not None:
                 doublon = doublon.exclude(pk=self.instance.pk)
+
             if doublon.exists():
                 raise serializers.ValidationError(
                     "Cet employé existe déjà. Le nom et le prénom sont déjà utilisés."
                 )
+
         return data
 
 
 class EmployeCreateSerializer(serializers.ModelSerializer):
-    password = serializers.CharField(write_only=True, validators=[validate_password])
+    password = serializers.CharField(
+        write_only=True,
+        validators=[validate_password]
+    )
 
     class Meta:
         model = Employe
@@ -81,17 +94,22 @@ class EmployeCreateSerializer(serializers.ModelSerializer):
     def validate(self, data):
         first_name = data.get('first_name')
         last_name = data.get('last_name')
-        if Employe.objects.filter(first_name__iexact=first_name, last_name__iexact=last_name).exists():
+
+        if first_name and last_name and Employe.objects.filter(
+            first_name__iexact=first_name,
+            last_name__iexact=last_name,
+        ).exists():
             raise serializers.ValidationError(
                 "Cet employé existe déjà. Le nom et le prénom sont déjà utilisés."
             )
+
         return data
 
     def create(self, validated_data):
         password = validated_data.pop('password')
         employe = Employe(**validated_data)
         employe.set_password(password)
-        employe.save()  # déclenche aussi full_clean() côté modèle
+        employe.save()
         return employe
 
 
@@ -114,3 +132,101 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         data['last_name'] = self.user.last_name
         data['email'] = self.user.email
         return data
+
+
+class InscriptionSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(
+        write_only=True,
+        validators=[validate_password]
+    )
+    password2 = serializers.CharField(
+        write_only=True,
+        label="Confirmation du mot de passe"
+    )
+
+    class Meta:
+        model = Employe
+        fields = [
+            'first_name',
+            'last_name',
+            'username',
+            'email',
+            'password',
+            'password2',
+        ]
+
+    def validate_first_name(self, valeur):
+        valeur = _normaliser(valeur)
+        try:
+            return valider_nom(valeur, "Le prénom")
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages[0])
+
+    def validate_last_name(self, valeur):
+        valeur = _normaliser(valeur)
+        try:
+            return valider_nom(valeur, "Le nom")
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.messages[0])
+
+    def validate_username(self, valeur):
+        valeur = _normaliser(valeur)
+
+        if not valeur:
+            raise serializers.ValidationError(
+                "Le nom d'utilisateur est obligatoire."
+            )
+
+        if Employe.objects.filter(username__iexact=valeur).exists():
+            raise serializers.ValidationError(
+                "Ce nom d'utilisateur est déjà utilisé."
+            )
+
+        return valeur
+
+    def validate_email(self, valeur):
+        valeur = _normaliser(valeur).lower()
+
+        if not valeur:
+            raise serializers.ValidationError(
+                "L'adresse e-mail est obligatoire."
+            )
+
+        if Employe.objects.filter(email__iexact=valeur).exists():
+            raise serializers.ValidationError(
+                "Cette adresse e-mail est déjà utilisée."
+            )
+
+        return valeur
+
+    def validate(self, data):
+        if data.get('password') != data.get('password2'):
+            raise serializers.ValidationError({
+                'password2': 'Les mots de passe ne correspondent pas.'
+            })
+
+        doublon = Employe.objects.filter(
+            first_name__iexact=data.get('first_name', ''),
+            last_name__iexact=data.get('last_name', ''),
+        )
+
+        if doublon.exists():
+            raise serializers.ValidationError(
+                "Cet employé existe déjà. Le nom et le prénom sont déjà utilisés."
+            )
+
+        return data
+
+    def create(self, validated_data):
+        validated_data.pop('password2')
+        password = validated_data.pop('password')
+
+        # Un compte public ne peut jamais devenir administrateur.
+        employe = Employe(
+            **validated_data,
+            role='EMPLOYE'
+        )
+        employe.set_password(password)
+        employe.save()
+
+        return employe

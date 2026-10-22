@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.views import APIView
@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from .models import Employe
-from .serializers import EmployeSerializer, EmployeCreateSerializer
+from .serializers import EmployeSerializer, EmployeCreateSerializer, InscriptionSerializer
 
 
 class IsAdmin(permissions.BasePermission):
@@ -60,3 +60,17 @@ class LogoutView(APIView):
             return Response({"detail": "Déconnexion réussie."})
         except TokenError:
             return Response({"detail": "Token invalide."}, status=400)
+
+
+class InscriptionView(APIView):
+    """Création de compte publique. Toujours role=EMPLOYE (voir InscriptionSerializer)."""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        serializer = InscriptionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"detail": "Compte créé avec succès. Vous pouvez maintenant vous connecter."},
+            status=status.HTTP_201_CREATED,
+        )
