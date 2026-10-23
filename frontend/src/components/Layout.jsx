@@ -1,17 +1,41 @@
+
 import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-    LayoutDashboard, Users, FileText, Send, CheckSquare,
-    Calendar, BarChart3, Settings, LogOut, ChevronDown, Menu, X, Info,
+    LayoutDashboard,
+    Users,
+    FileText,
+    Send,
+    CheckSquare,
+    Calendar,
+    BarChart3,
+    Settings,
+    LogOut,
+    ChevronDown,
+    Menu,
+    X,
+    Info,
+    Wallet,
 } from 'lucide-react';
 
 const TOUS_LES_LIENS = [
     { to: '/dashboard', icone: LayoutDashboard, texte: 'Accueil' },
     { to: '/employes', icone: Users, texte: 'Employés', roles: ['ADMIN'] },
+    {
+        to: '/soldes',
+        icone: Wallet,
+        texte: 'Mes congés',
+        roles: ['ADMIN', 'EMPLOYE', 'RESPONSABLE'],
+    },
     { to: '/demandes', icone: FileText, texte: 'Mes demandes' },
     { to: '/demandes/nouvelle', icone: Send, texte: 'Nouvelle demande' },
-    { to: '/demandes/valider', icone: CheckSquare, texte: 'Validation', roles: ['RESPONSABLE', 'ADMIN'] },
+    {
+        to: '/demandes/valider',
+        icone: CheckSquare,
+        texte: 'Validation',
+        roles: ['RESPONSABLE', 'ADMIN'],
+    },
     { to: '/calendrier', icone: Calendar, texte: 'Calendrier' },
     { to: '/rapports', icone: BarChart3, texte: 'Rapports', roles: ['ADMIN'] },
     { to: '/parametres', icone: Settings, texte: 'Paramètres', roles: ['ADMIN'] },
@@ -22,11 +46,15 @@ const SEUIL_MOBILE = 768;
 
 function useLargeurFenetre() {
     const [largeur, setLargeur] = useState(window.innerWidth);
+
     useEffect(() => {
         const majLargeur = () => setLargeur(window.innerWidth);
+
         window.addEventListener('resize', majLargeur);
+
         return () => window.removeEventListener('resize', majLargeur);
     }, []);
+
     return largeur;
 }
 
@@ -37,7 +65,6 @@ export default function Layout({ children }) {
     const estMobile = largeur < SEUIL_MOBILE;
     const [menuOuvert, setMenuOuvert] = useState(false);
 
-    // Ferme le menu mobile à chaque navigation
     useEffect(() => {
         setMenuOuvert(false);
     }, [largeur]);
@@ -48,30 +75,44 @@ export default function Layout({ children }) {
     };
 
     const role = String(user?.role || '').toUpperCase();
-    const liens = TOUS_LES_LIENS.filter((l) => !l.roles || l.roles.includes(role));
+
+    const liens = TOUS_LES_LIENS.filter(
+        (lien) => !lien.roles || lien.roles.includes(role)
+    );
 
     const sidebarVisible = !estMobile || menuOuvert;
 
     return (
         <div style={styles.page}>
-            {/* Fond sombre derrière le menu mobile ouvert */}
             {estMobile && menuOuvert && (
-                <div style={styles.voile} onClick={() => setMenuOuvert(false)} />
+                <div
+                    style={styles.voile}
+                    onClick={() => setMenuOuvert(false)}
+                />
             )}
 
-            {/* SIDEBAR */}
             <aside
                 style={{
                     ...styles.sidebar,
                     ...(estMobile ? styles.sidebarMobile : {}),
-                    ...(estMobile && !sidebarVisible ? styles.sidebarCachee : {}),
+                    ...(estMobile && !sidebarVisible
+                        ? styles.sidebarCachee
+                        : {}),
                 }}
             >
                 <div style={styles.logoZone}>
                     <div style={styles.logoIcone}>📅</div>
-                    <span style={styles.logoTexte}>Gestion des congés</span>
+
+                    <span style={styles.logoTexte}>
+                        Gestion des congés
+                    </span>
+
                     {estMobile && (
-                        <button style={styles.boutonFermer} onClick={() => setMenuOuvert(false)}>
+                        <button
+                            style={styles.boutonFermer}
+                            onClick={() => setMenuOuvert(false)}
+                            aria-label="Fermer le menu"
+                        >
                             <X size={20} />
                         </button>
                     )}
@@ -86,48 +127,78 @@ export default function Layout({ children }) {
                             onClick={() => setMenuOuvert(false)}
                             style={({ isActive }) => ({
                                 ...styles.navLien,
-                                ...(isActive ? styles.navLienActif : {}),
+                                ...(isActive
+                                    ? styles.navLienActif
+                                    : {}),
                             })}
                         >
                             <lien.icone size={18} />
-                            {lien.texte}
+                            <span>{lien.texte}</span>
                         </NavLink>
                     ))}
                 </nav>
 
-                <button onClick={handleLogout} style={styles.deconnexion}>
+                <button
+                    onClick={handleLogout}
+                    style={styles.deconnexion}
+                >
                     <LogOut size={18} />
                     Déconnexion
                 </button>
             </aside>
 
-            {/* CONTENU PRINCIPAL */}
             <div style={styles.contenuPrincipal}>
                 <header style={styles.topbar}>
                     {estMobile ? (
-                        <button style={styles.boutonMenu} onClick={() => setMenuOuvert(true)}>
+                        <button
+                            style={styles.boutonMenu}
+                            onClick={() => setMenuOuvert(true)}
+                            aria-label="Ouvrir le menu"
+                        >
                             <Menu size={22} color="#0f2557" />
                         </button>
                     ) : (
                         <div />
                     )}
+
                     <div style={styles.topbarDroite}>
                         {!estMobile && (
                             <span style={styles.date}>
-                                {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                                {new Date().toLocaleDateString('fr-FR', {
+                                    weekday: 'long',
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric',
+                                })}
                             </span>
                         )}
+
                         <div style={styles.utilisateurZone}>
                             <div style={styles.avatar}>
-                                {(user?.first_name?.[0] || user?.username?.[0] || '?').toUpperCase()}
+                                {(
+                                    user?.first_name?.[0] ||
+                                    user?.username?.[0] ||
+                                    '?'
+                                ).toUpperCase()}
                             </div>
-                            {!estMobile && <span>{user?.first_name || user?.username}</span>}
+
+                            {!estMobile && (
+                                <span>
+                                    {user?.first_name || user?.username}
+                                </span>
+                            )}
+
                             <ChevronDown size={16} />
                         </div>
                     </div>
                 </header>
 
-                <main style={{ ...styles.main, ...(estMobile ? styles.mainMobile : {}) }}>
+                <main
+                    style={{
+                        ...styles.main,
+                        ...(estMobile ? styles.mainMobile : {}),
+                    }}
+                >
                     {children}
                 </main>
             </div>
@@ -147,12 +218,14 @@ const styles = {
         fontFamily: "'Segoe UI', Roboto, sans-serif",
         position: 'relative',
     },
+
     voile: {
         position: 'fixed',
         inset: 0,
         backgroundColor: 'rgba(15,37,87,0.5)',
         zIndex: 40,
     },
+
     sidebar: {
         width: '230px',
         flexShrink: 0,
@@ -164,8 +237,10 @@ const styles = {
         position: 'sticky',
         top: 0,
         height: '100vh',
+        boxSizing: 'border-box',
         transition: 'transform 0.25s ease',
     },
+
     sidebarMobile: {
         position: 'fixed',
         top: 0,
@@ -175,9 +250,11 @@ const styles = {
         maxWidth: '280px',
         transform: 'translateX(0)',
     },
+
     sidebarCachee: {
         transform: 'translateX(-105%)',
     },
+
     logoZone: {
         display: 'flex',
         alignItems: 'center',
@@ -187,6 +264,7 @@ const styles = {
         marginBottom: '1rem',
         position: 'relative',
     },
+
     logoIcone: {
         width: '34px',
         height: '34px',
@@ -198,7 +276,13 @@ const styles = {
         fontSize: '1rem',
         flexShrink: 0,
     },
-    logoTexte: { fontWeight: 600, fontSize: '0.95rem', flexGrow: 1 },
+
+    logoTexte: {
+        fontWeight: 600,
+        fontSize: '0.95rem',
+        flexGrow: 1,
+    },
+
     boutonFermer: {
         background: 'none',
         border: 'none',
@@ -207,6 +291,7 @@ const styles = {
         display: 'flex',
         padding: '0.2rem',
     },
+
     nav: {
         display: 'flex',
         flexDirection: 'column',
@@ -214,6 +299,7 @@ const styles = {
         flexGrow: 1,
         overflowY: 'auto',
     },
+
     navLien: {
         display: 'flex',
         alignItems: 'center',
@@ -225,10 +311,12 @@ const styles = {
         fontSize: '0.9rem',
         transition: 'background-color 0.15s',
     },
+
     navLienActif: {
         backgroundColor: BLUE,
         color: '#fff',
     },
+
     deconnexion: {
         display: 'flex',
         alignItems: 'center',
@@ -243,6 +331,7 @@ const styles = {
         marginTop: '1rem',
         paddingTop: '1rem',
     },
+
     contenuPrincipal: {
         flexGrow: 1,
         minWidth: 0,
@@ -250,6 +339,7 @@ const styles = {
         flexDirection: 'column',
         width: '100%',
     },
+
     topbar: {
         display: 'flex',
         justifyContent: 'space-between',
@@ -261,6 +351,7 @@ const styles = {
         top: 0,
         zIndex: 20,
     },
+
     boutonMenu: {
         background: 'none',
         border: 'none',
@@ -268,13 +359,19 @@ const styles = {
         display: 'flex',
         padding: '0.3rem',
     },
+
     topbarDroite: {
         display: 'flex',
         alignItems: 'center',
         gap: '1.5rem',
         marginLeft: 'auto',
     },
-    date: { color: '#666', fontSize: '0.85rem' },
+
+    date: {
+        color: '#666',
+        fontSize: '0.85rem',
+    },
+
     utilisateurZone: {
         display: 'flex',
         alignItems: 'center',
@@ -282,6 +379,7 @@ const styles = {
         fontSize: '0.9rem',
         fontWeight: 500,
     },
+
     avatar: {
         width: '32px',
         height: '32px',
@@ -295,11 +393,15 @@ const styles = {
         fontSize: '0.85rem',
         flexShrink: 0,
     },
+
     main: {
         flexGrow: 1,
         padding: '2rem',
+        minWidth: 0,
     },
+
     mainMobile: {
         padding: '1rem',
     },
 };
+ 

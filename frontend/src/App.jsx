@@ -13,6 +13,8 @@ import Calendrier from './pages/Calendrier';
 import Rapports from './pages/Rapports';
 import Parametres from './pages/Parametres';
 import APropos from './pages/APropos';
+import Inscription from './pages/Inscription';
+import Soldes from './pages/Soldes';
 
 const Page = ({ children }) => (
     <RouteProtegee><Layout>{children}</Layout></RouteProtegee>
@@ -39,6 +41,9 @@ function App() {
 
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                    <Route path="/inscription" element={<Inscription />} />
+
+                    <Route path="/soldes" element={<Page><Soldes /></Page>} />
                 </Routes>
             </BrowserRouter>
         </AuthProvider>
