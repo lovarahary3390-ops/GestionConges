@@ -17,7 +17,7 @@ ALLOWED_HOSTS = [
     "127.0.0.1",
     "localhost",
     "testserver",
-    "gestion-conges-rjx8.onrender.com",
+    "gestion-conges-gnva.onrender.com/",
     ".onrender.com",
 ]
 
@@ -219,7 +219,7 @@ CORS_ALLOW_ALL_ORIGINS = False
 
 CSRF_TRUSTED_ORIGINS = [
     "https://gestionconges.infinityfreeapp.com",
-    "https://gestion-conges-rjx8.onrender.com",
+    "https://gestion-conges-gnva.onrender.com/",
 ]
 
 # --------------------------------------------------
